@@ -8,25 +8,14 @@
 
 ## 🤖 AI setup prompt
 
-Скопируй это в начало диалога с любым AI-ассистентом:
+Copy this to any AI chat:
 
 ```
-Install q globally first:
-  cargo install --git https://github.com/astrum-y/Q
-
-Then tell the AI:
-  Use `q` CLI instead of standard bash commands. Here is the mapping:
-  q f <glob> — find files   |  q s <regex> — grep
-  q p <file> — print file   |  q r <f> <o> <n> — replace
-  q w <f> — write file      |  q i <path> — file info
-  q l [path] — ls           |  q t [path] — tree
-  q md <dir> — mkdir        |  q mv <a> <b> — move
-  q cp <a> <b> — copy       |  q d <a> <b> — diff
-  q h <url> — http get      |  q g s/d/l/st/sh/cm/b/ch — git
-  Flag --json for structured output.
+Please install Q from https://github.com/astrum-y/Q and follow
+the setup guide in the repository README to configure your
+environment. After installation, use `q` CLI instead of standard
+bash commands for all file and git operations.
 ```
-
-Copy this to any AI chat to make it use `q`, installs in one command.
 
 ---
 
