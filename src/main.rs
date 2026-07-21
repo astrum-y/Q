@@ -149,7 +149,7 @@ enum Commands {
         url: String,
     },
 
-    #[command(about = "Git-команды")]
+    #[command(alias = "g", about = "Git-команды")]
     Git {
         #[command(subcommand)]
         action: GitAction,
