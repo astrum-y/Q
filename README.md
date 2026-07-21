@@ -4,28 +4,57 @@
 
 ## Установка
 
-### Cargo (рекомендуется)
+### Linux / macOS
 
 ```bash
+# Через cargo (рекомендуется)
 cargo install --git https://github.com/astrum-y/Q
-```
 
-### Из исходников
-
-```bash
+# Или из исходников
 git clone https://github.com/astrum-y/Q
 cd Q
 cargo install --path .
 ```
 
-Бинарник установится в `~/.cargo/bin/q`. Убедись, что `~/.cargo/bin` есть в `PATH`.
+Бинарник в `~/.cargo/bin/q`. Убедись, что `~/.cargo/bin` в `PATH`.
+
+### macOS (Homebrew)
+
+```bash
+# Скоро будет доступен в tap
+# brew install q
+```
+
+Пока — через `cargo install` (см. выше).
+
+### Windows
+
+```powershell
+# Через cargo (требуется Rust)
+cargo install --git https://github.com/astrum-y/Q
+
+# Или scoop (если есть)
+# scoop install q
+```
+
+Бинарник в `%USERPROFILE%\.cargo\bin\q.exe`.
+Добавь `%USERPROFILE%\.cargo\bin` в `PATH` если ещё не добавлен.
+
+### Проверка
+
+```bash
+q --version
+# → q 0.1.0
+```
 
 ### Требования
 
-- Rust (MSRV 1.70)
-- `curl` — для `q h`
-- `diff` — для `q d`
-- `git` — для `q g`
+| Инструмент | Для | Linux | macOS | Windows |
+|---|---|---|---|---|
+| Rust 1.70+ | Сборка | `apt install rustc cargo` | `brew install rust` | [rustup.rs](https://rustup.rs) |
+| `curl` | `q h` | встроен | встроен | встроен в Win10+ |
+| `diff` | `q d` | встроен | встроен | `diffutils` через scoop/choco |
+| `git` | `q g` | `apt install git` | `brew install git` | [git-scm.com](https://git-scm.com) |
 
 ## Подключение к AI-агентам
 
