@@ -33,6 +33,8 @@ enum Commands {
         pattern: String,
         #[arg(short = 't', long = "type", help = "тип файла (rs,py,ts,js,c,pp,go,java,md,html,css)")]
         type_names: Option<String>,
+        #[arg(help = "путь для поиска (по умолч. .)")]
+        path: Option<String>,
     },
 
     #[command(alias = "s", about = "Поиск содержимого (grep)")]
@@ -47,6 +49,8 @@ enum Commands {
         context: usize,
         #[arg(long = "no-trunc", help = "не обрезать вывод")]
         no_trunc: bool,
+        #[arg(help = "путь для поиска (по умолч. .)")]
+        path: Option<String>,
     },
 
     #[command(alias = "p", about = "Печать файла")]
@@ -321,9 +325,9 @@ fn main() {
     let json = cli.json;
 
     let result = match &cli.command {
-        Commands::Find { pattern, type_names } => cmd_find(pattern, type_names.as_deref(), json),
-        Commands::Search { pattern, glob, type_names, context, no_trunc } => {
-            cmd_search(pattern, glob.as_deref(), type_names.as_deref(), *context, *no_trunc, json)
+        Commands::Find { pattern, type_names, path } => cmd_find(pattern, type_names.as_deref(), path.as_deref(), json),
+        Commands::Search { pattern, glob, type_names, context, no_trunc, path } => {
+            cmd_search(pattern, glob.as_deref(), type_names.as_deref(), *context, *no_trunc, path.as_deref(), json)
         }
         Commands::Print { file, offset, limit, no_trunc } => cmd_print(file, *offset, *limit, *no_trunc, json),
         Commands::Replace { file, old, new, all, dry_run, regex, undo } => {
@@ -392,7 +396,7 @@ fn apply_trunc(text: &str, max_lines: usize, no_trunc: bool) -> (String, bool) {
 
 // ── Find ─────────────────────────────────────────────────────────────────────
 
-fn cmd_find(pattern: &str, type_names: Option<&str>, json: bool) -> Result<String, String> {
+fn cmd_find(pattern: &str, type_names: Option<&str>, root: Option<&str>, json: bool) -> Result<String, String> {
     let mut builder = GlobSetBuilder::new();
     builder.add(Glob::new(pattern).map_err(|e| format!("invalid glob: {e}"))?);
     let glob_set = builder.build().map_err(|e| format!("glob error: {e}"))?;
@@ -403,8 +407,9 @@ fn cmd_find(pattern: &str, type_names: Option<&str>, json: bool) -> Result<Strin
     };
 
     let mut files = Vec::new();
+    let root = root.unwrap_or(".");
 
-    let mut wb = WalkBuilder::new(".");
+    let mut wb = WalkBuilder::new(root);
     wb.standard_filters(true);
     wb.follow_links(true);
     if let Some(ref tm) = type_matcher {
@@ -442,6 +447,7 @@ fn cmd_search(
     type_names: Option<&str>,
     context: usize,
     no_trunc: bool,
+    root: Option<&str>,
     json: bool,
 ) -> Result<String, String> {
     let re = Regex::new(pattern).map_err(|e| format!("invalid regex: {e}"))?;
@@ -460,8 +466,9 @@ fn cmd_search(
     };
 
     let mut matches = Vec::new();
+    let root = root.unwrap_or(".");
 
-    let mut wb = WalkBuilder::new(".");
+    let mut wb = WalkBuilder::new(root);
     wb.standard_filters(true);
     wb.follow_links(true);
     if let Some(ref tm) = type_matcher {

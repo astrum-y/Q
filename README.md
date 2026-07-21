@@ -167,8 +167,8 @@ echo 'read: AGENTS.md' >> ~/.aider.conf.yml
 
 | Команда | Алиас | Описание | Вместо |
 |---|---|---|---|
-| `q find <glob>` | `q f` | Поиск файлов по glob | `find . -name` |
-| `q search <regex>` | `q s` | Поиск содержимого (grep) | `grep -rn` |
+| `q find <glob> [path]` | `q f` | Поиск файлов по glob | `find /path -name` |
+| `q search <regex> [path]` | `q s` | Поиск содержимого (grep) | `grep -rn /path` |
 | `q print <file>` | `q p` | Печать файла или диапазона | `cat` |
 | `q replace <file> <old> <new>` | `q r` | Замена текста | `sed -i` |
 | `q write <file> [content]` | `q w` | Запись файла | `echo > file` |
