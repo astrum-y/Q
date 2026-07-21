@@ -2,73 +2,86 @@
 
 **Микро-команды для AI.** Одна буква — одно действие. Минимум токенов, максимум скорости.
 
-## Установка
+**Micro-commands for AI.** One letter, one action. Minimum tokens, maximum speed.
+
+---
+
+## 🤖 AI setup prompt
+
+Скопируй это в начало диалога с любым AI-ассистентом:
+
+```
+Install q globally first:
+  cargo install --git https://github.com/astrum-y/Q
+
+Then tell the AI:
+  Use `q` CLI instead of standard bash commands. Here is the mapping:
+  q f <glob> — find files   |  q s <regex> — grep
+  q p <file> — print file   |  q r <f> <o> <n> — replace
+  q w <f> — write file      |  q i <path> — file info
+  q l [path] — ls           |  q t [path] — tree
+  q md <dir> — mkdir        |  q mv <a> <b> — move
+  q cp <a> <b> — copy       |  q d <a> <b> — diff
+  q h <url> — http get      |  q g s/d/l/st/sh/cm/b/ch — git
+  Flag --json for structured output.
+```
+
+Copy this to any AI chat to make it use `q`, installs in one command.
+
+---
+
+## Установка / Install
 
 ### Linux / macOS
 
 ```bash
-# Через cargo (рекомендуется)
 cargo install --git https://github.com/astrum-y/Q
-
-# Или из исходников
-git clone https://github.com/astrum-y/Q
-cd Q
-cargo install --path .
 ```
 
-Бинарник в `~/.cargo/bin/q`. Убедись, что `~/.cargo/bin` в `PATH`.
+Или из исходников / Or from source:
+```bash
+git clone https://github.com/astrum-y/Q && cd Q && cargo install --path .
+```
+
+Бинарник в `~/.cargo/bin/q`. / Binary at `~/.cargo/bin/q`.
 
 ### macOS (Homebrew)
 
 ```bash
-# Скоро будет доступен в tap
-# brew install q
+# Скоро / Coming soon
 ```
 
-Пока — через `cargo install` (см. выше).
+Пока — через `cargo install` выше. / For now — `cargo install` above.
 
 ### Windows
 
 ```powershell
-# Через cargo (требуется Rust)
 cargo install --git https://github.com/astrum-y/Q
-
-# Или scoop (если есть)
-# scoop install q
 ```
 
-Бинарник в `%USERPROFILE%\.cargo\bin\q.exe`.
-Добавь `%USERPROFILE%\.cargo\bin` в `PATH` если ещё не добавлен.
+Бинарник в `%USERPROFILE%\.cargo\bin\q.exe`. / Binary at `%USERPROFILE%\.cargo\bin\q.exe`.
 
-### Проверка
+### Проверка / Verify
 
 ```bash
 q --version
 # → q 0.1.0
 ```
 
-### Требования
+### Требования / Requirements
 
-| Инструмент | Для | Linux | macOS | Windows |
-|---|---|---|---|---|
-| Rust 1.70+ | Сборка | `apt install rustc cargo` | `brew install rust` | [rustup.rs](https://rustup.rs) |
-| `curl` | `q h` | встроен | встроен | встроен в Win10+ |
-| `diff` | `q d` | встроен | встроен | `diffutils` через scoop/choco |
-| `git` | `q g` | `apt install git` | `brew install git` | [git-scm.com](https://git-scm.com) |
+| Tool  | Linux | macOS | Windows |
+|-------|-------|-------|---------|
+| Rust 1.70+ | `apt install rustc cargo` | `brew install rust` | [rustup.rs](https://rustup.rs) |
+| `curl` | built-in | built-in | built-in (Win10+) |
+| `diff` | built-in | built-in | `diffutils` via scoop/choco |
+| `git`  | `apt install git` | `brew install git` | [git-scm.com](https://git-scm.com) |
 
-## Подключение к AI-агентам
+---
 
-Чтобы AI использовал `q` вместо bash-команд, создай файл с инструкциями.
-Ниже — пути для каждого клиента.
+## Подключение к AI / Connect to AI
 
 ### opencode
-
-```bash
-# Глобальный конфиг
-mkdir -p ~/.config/opencode
-
-# Создать AGENTS.md с инструкциями
-```
 
 Добавь в `~/.config/opencode/opencode.jsonc`:
 
@@ -76,125 +89,73 @@ mkdir -p ~/.config/opencode
 "instructions": ["~/.config/opencode/AGENTS.md"]
 ```
 
-И создай `~/.config/opencode/AGENTS.md`:
-
-```markdown
-# Global Q instructions
-
-Use `q` CLI instead of standard bash commands.
-
-## Command mapping
-
-| Instead of | Use |
-|---|---|
-| `find . -name "*.rs"` | `q f "**/*.rs"` |
-| `grep -rn "pattern"` | `q s "pattern"` |
-| `cat file.rs` | `q p file.rs` |
-| `sed -i 's/old/new/' file.rs` | `q r file.rs "old" "new"` |
-| `echo "x" > file` | `q w file "x"` |
-| `stat file` | `q i file` |
-| `tree .` | `q t .` |
-| `ls` | `q l` |
-| `mkdir -p path` | `q md path` |
-| `mv from to` | `q mv from to` |
-| `cp from to` | `q cp from to` |
-| `diff -u a b` | `q d a b` |
-| `curl -sL https://x.com` | `q h https://x.com` |
-| `git status --short` | `q g s` |
-| `git diff` | `q g d` |
-| `git log --oneline -10` | `q g l` |
-| `git diff --cached` | `q g st` |
-| `git show HEAD` | `q g sh HEAD` |
-| `git add -A && git commit -m "x"` | `q g cm "x"` |
-| `git branch` | `q g b` |
-| `git checkout main` | `q g ch main` |
-
-## Key flags
-
-- `--json` — structured output, preferred for AI processing
-- `--no-trunc` — disable 200-line truncation
-- `--type rs,py,ts` — filter by language in `q f` / `q s`
-
-## Why
-
-`q` uses 2-5 tokens per operation instead of 10-30+ for standard commands.
-Output is auto-truncated at 200 lines. JSON mode saves hundreds of tokens.
-```
-
-После изменения конфига — **полностью выйди и заново запусти** opencode.
+И создай `~/.config/opencode/AGENTS.md` (содержимое ниже / content below).
 
 ### Claude Code
 
 ```bash
-# Глобально (все проекты):
 mkdir -p ~/.claude
-# Скопируй AGENTS.md выше в этот файл:
-touch ~/.claude/instructions.md
-
-# Или для конкретного проекта:
-touch .claude/instructions.md
+# скопируй содержимое AGENTS.md в ~/.claude/instructions.md
 ```
 
 ### Cursor
 
 ```bash
-touch ~/.cursorrules
-# Скопируй содержимое AGENTS.md в этот файл
+# скопируй содержимое AGENTS.md в ~/.cursorrules
 ```
 
 ### Windsurf
 
 ```bash
-touch ~/.windsurfrules
-# Скопируй содержимое AGENTS.md в этот файл
+# скопируй содержимое AGENTS.md в ~/.windsurfrules
 ```
 
 ### Aider
 
 ```bash
-# В ~/.aider.conf.yml:
 echo 'read: AGENTS.md' >> ~/.aider.conf.yml
 ```
 
-### GitHub Copilot / Zed
+После настройки — **выйди и заново запусти** клиент, чтобы конфиг применился.
 
-Скопируй содержимое AGENTS.md в `.github/copilot-instructions.md` (для Copilot)
-или в `.zed/instructions.md` (для Zed).
+---
 
-## Команды
+## Команды / Commands
 
-### Файловые операции
+### Файловые операции / File operations
 
-| Команда | Алиас | Описание | Вместо |
+| Команда / Command | Алиас | Описание / Description | Вместо / Instead of |
 |---|---|---|---|
 | `q find <glob> [path]` | `q f` | Поиск файлов по glob | `find /path -name` |
 | `q search <regex> [path]` | `q s` | Поиск содержимого (grep) | `grep -rn /path` |
 | `q print <file>` | `q p` | Печать файла или диапазона | `cat` |
-| `q replace <file> <old> <new>` | `q r` | Замена текста | `sed -i` |
-| `q write <file> [content]` | `q w` | Запись файла | `echo > file` |
+| `q replace <file> <old> <new>` | `q r` | Замена текста (plain / regex) | `sed -i` |
+| `q write <file> [content]` | `q w` | Запись файла (args / stdin) | `echo > file` |
 | `q info <path>` | `q i` | Информация о файле/папке | `stat`, `wc -l` |
 | `q tree [path]` | `q t` | Дерево директории | `tree` |
 | `q ls [path]` | `q l` | Список директории | `ls` |
 | `q mkdir <path>` | `q md` | Создать директорию | `mkdir -p` |
-| `q mv <from> <to>` | — | Переименовать/переместить | `mv` |
+| `q mv <from> <to>` | — | Переименовать / переместить | `mv` |
 | `q cp <from> <to>` | — | Копировать | `cp` |
 | `q diff <a> <b>` | `q d` | Diff двух файлов | `diff -u` |
 | `q http <url>` | `q h` | HTTP GET | `curl -sL` |
 
 ### Git
 
-| Команда | Описание | Вместо |
+| Команда / Command | Описание / Description | Вместо / Instead of |
 |---|---|---|
-| `q git status` | `q g s` | `git status --short` |
-| `q git diff` | `q g d` | `git diff` |
-| `q git log` | `q g l` | `git log --oneline -10` |
-| `q git staged` | `q g st` | `git diff --cached` |
-| `q git show <rev>` | `q g sh` | `git show` |
-| `q git commit <msg>` | `q g cm` | `git add -A && git commit -m` |
-| `q git branch` | `q g b` | `git branch` |
-| `q git checkout <branch>` | `q g ch` | `git checkout` |
+| `q g s` | git status --short | `git status --short` |
+| `q g d` | git diff | `git diff` |
+| `q g l` | git log --oneline -10 | `git log --oneline -10` |
+| `q g st` | git diff --cached | `git diff --cached` |
+| `q g sh <rev>` | git show | `git show HEAD` |
+| `q g cm <msg>` | git add -A && git commit -m | `git add -A && git commit -m` |
+| `q g b` | git branch | `git branch` |
+| `q g ch <branch>` | git checkout | `git checkout main` |
 
-## Фишки
+---
+
+## Фишки / Features
 
 - **`--json`** — JSON-вывод для всех команд (AI-friendly, экономит парсинг)
 - **`--type rs,py,ts`** — фильтр по языку для `q f`/`q s`
@@ -204,7 +165,9 @@ echo 'read: AGENTS.md' >> ~/.aider.conf.yml
 - **`q r --undo`** — откат последней замены (из `.q.bak`)
 - **`--no-trunc`** — отключить автообрезание (по умолчанию 200 строк)
 
-## Примеры
+---
+
+## Примеры / Examples
 
 ```bash
 q f "**/*.rs"                          # найти все .rs файлы
@@ -234,17 +197,21 @@ q g ch main                            # git checkout
 q h https://example.com                # HTTP GET
 ```
 
-## Экономия токенов
+---
 
-| Операция | bash | q | Экономия |
+## Экономия токенов / Token savings
+
+| Операция / Operation | bash | q | Экономия / Savings |
 |---|---|---|---|
-| Найти .rs файлы | `find . -name "*.rs"` | `q f "**/*.rs"` | ~3x |
-| Grep по проекту | `grep -rn "foo" --include="*.rs"` | `q s "foo" --type rust` | ~4x |
-| Замена в файле | `sed -i 's/old/new/g' file` | `q r file old new -a` | ~3x |
-| Git status | `git status --short` | `q g s` | ~3x |
-| Git log | `git log --oneline -5` | `q g l -n 5` | ~2x |
-| Чтение файла | `cat file` (весь файл) | `q p file:1-50` (только 50 строк) | ~10x+ |
+| Найти / find .rs файлы | `find . -name "*.rs"` | `q f "**/*.rs"` | ~3× |
+| Grep по проекту | `grep -rn "foo" --include="*.rs"` | `q s "foo" --type rust` | ~4× |
+| Замена / replace | `sed -i 's/old/new/g' file` | `q r file old new -a` | ~3× |
+| Git status | `git status --short` | `q g s` | ~3× |
+| Git log | `git log --oneline -5` | `q g l -n 5` | ~2× |
+| Чтение файла / read | `cat file` (весь файл) | `q p file:1-50` (только 50 строк) | ~10×+ |
 
-## Лицензия
+---
+
+## Лицензия / License
 
 MIT
