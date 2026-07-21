@@ -1,0 +1,19 @@
+[package]
+name = "q"
+version = "0.1.0"
+edition = "2021"
+description = "Micro-commands for AI — find, search, replace, print at the speed of tokens"
+authors = ["q <q@q.q>"]
+license = "MIT"
+repository = "https://github.com/user/q"
+homepage = "https://github.com/user/q"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+globset = "0.4"
+walkdir = "2"
+ignore = "0.4"
+regex = "1"
+chrono = "0.4"
