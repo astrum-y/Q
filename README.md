@@ -209,8 +209,10 @@ echo 'read: AGENTS.md' >> ~/.aider.conf.yml
 ```bash
 q f "**/*.rs"                          # найти все .rs файлы
 q f "**/*.ts" --type ts                # только TypeScript
+q f "*.cfg" /etc                       # найти .cfg во всей системе
 q s "fn main"                          # grep по проекту
 q s "TODO" --type py,ts --json         # TODO только в Python/TS, JSON
+q s "error" /var/log                   # поиск по абсолютному пути
 q p src/main.rs:50-60                  # строки 50-60
 q p src/main.rs:50:+5                  # 5 строк начиная с 50
 q i src/main.rs                        # статистика файла
