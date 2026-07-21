@@ -103,6 +103,38 @@ enum Commands {
         dirs_only: bool,
     },
 
+    #[command(alias = "l", about = "Список директории")]
+    Ls {
+        #[arg(help = "путь (по умолчанию .)")]
+        path: Option<String>,
+        #[arg(short = 'l', long = "long", help = "подробный формат")]
+        long: bool,
+        #[arg(short = 'a', long = "all", help = "показать скрытые")]
+        all: bool,
+    },
+
+    #[command(alias = "md", about = "Создать директорию (mkdir -p)")]
+    Mkdir {
+        #[arg(help = "путь")]
+        path: String,
+    },
+
+    #[command(about = "Переименовать/переместить")]
+    Mv {
+        #[arg(help = "откуда")]
+        from: String,
+        #[arg(help = "куда")]
+        to: String,
+    },
+
+    #[command(about = "Копировать")]
+    Cp {
+        #[arg(help = "откуда")]
+        from: String,
+        #[arg(help = "куда")]
+        to: String,
+    },
+
     #[command(alias = "d", about = "Diff двух файлов")]
     Diff {
         #[arg(help = "файл A")]
@@ -141,6 +173,18 @@ enum GitAction {
     Show {
         #[arg(help = "ревизия (HEAD, хэш, ...)")]
         rev: String,
+    },
+    #[command(alias = "cm", about = "git commit -m")]
+    Commit {
+        #[arg(help = "сообщение коммита")]
+        msg: String,
+    },
+    #[command(alias = "b", about = "git branch")]
+    Branch,
+    #[command(alias = "ch", about = "git checkout")]
+    Checkout {
+        #[arg(help = "ветка")]
+        branch: String,
     },
 }
 
@@ -219,6 +263,28 @@ struct TreeResult {
 }
 
 #[derive(Serialize)]
+struct LsEntry {
+    name: String,
+    is_dir: bool,
+    size: Option<u64>,
+    modified: Option<String>,
+}
+
+#[derive(Serialize)]
+struct LsResult {
+    kind: &'static str,
+    path: String,
+    entries: Vec<LsEntry>,
+}
+
+#[derive(Serialize)]
+struct FsResult {
+    kind: &'static str,
+    from: String,
+    to: String,
+}
+
+#[derive(Serialize)]
 struct DiffResult {
     kind: &'static str,
     file_a: String,
@@ -266,6 +332,10 @@ fn main() {
         Commands::Write { file, content } => cmd_write(file, content.as_deref(), json),
         Commands::Info { path } => cmd_info(path, json),
         Commands::Tree { path, depth, dirs_only } => cmd_tree(path.as_deref(), *depth, *dirs_only, json),
+        Commands::Ls { path, long, all } => cmd_ls(path.as_deref(), *long, *all, json),
+        Commands::Mkdir { path } => cmd_mkdir(path, json),
+        Commands::Mv { from, to } => cmd_mv(from, to, json),
+        Commands::Cp { from, to } => cmd_cp(from, to, json),
         Commands::Diff { file_a, file_b } => cmd_diff(file_a, file_b, json),
         Commands::Http { url } => cmd_http(url, json),
         Commands::Git { action } => cmd_git(action, json),
@@ -806,6 +876,98 @@ fn cmd_tree(path: Option<&str>, depth: usize, dirs_only: bool, json: bool) -> Re
     }
 }
 
+// ── Ls ───────────────────────────────────────────────────────────────────────
+
+fn cmd_ls(path: Option<&str>, long: bool, all: bool, json: bool) -> Result<String, String> {
+    let root = path.unwrap_or(".");
+    let mut entries = Vec::new();
+
+    let rd = std::fs::read_dir(root).map_err(|e| format!("read_dir {root}: {e}"))?;
+    let mut names: Vec<_> = rd.filter_map(|e| e.ok()).collect();
+    names.sort_by_key(|e| e.file_name());
+
+    for entry in names {
+        let name = entry.file_name().to_string_lossy().to_string();
+        if !all && name.starts_with('.') {
+            continue;
+        }
+        let ft = entry.file_type().ok();
+        let is_dir = ft.map_or(false, |f| f.is_dir());
+        let meta = entry.metadata().ok();
+        let size = meta.as_ref().map(|m| m.len());
+        let modified = meta.and_then(|m| m.modified().ok()).map(|t| -> String {
+            let dt: DateTime<Local> = t.into();
+            dt.format("%Y-%m-%d %H:%M:%S").to_string()
+        });
+        entries.push(LsEntry { name, is_dir, size, modified });
+    }
+
+    if json {
+        let r = LsResult { kind: "ls", path: root.to_string(), entries };
+        serde_json::to_string(&r).map_err(|e| e.to_string())
+    } else if long {
+        let mut out = String::new();
+        for e in &entries {
+            let size_str = e.size.map(|s| format!("{:>8}", s)).unwrap_or("       -".into());
+            let mod_str = e.modified.as_deref().unwrap_or("-");
+            let suffix = if e.is_dir { "/" } else { "" };
+            out.push_str(&format!("{size_str} {mod_str} {}{suffix}\n", e.name));
+        }
+        Ok(out.trim_end().to_string())
+    } else {
+        let out: Vec<String> = entries.iter().map(|e| {
+            if e.is_dir { format!("{}/", e.name) } else { e.name.clone() }
+        }).collect();
+        Ok(out.join("  "))
+    }
+}
+
+// ── Mkdir ────────────────────────────────────────────────────────────────────
+
+fn cmd_mkdir(path: &str, json: bool) -> Result<String, String> {
+    std::fs::create_dir_all(path).map_err(|e| format!("mkdir {path}: {e}"))?;
+    if json {
+        let r = serde_json::json!({"kind": "mkdir", "path": path});
+        serde_json::to_string(&r).map_err(|e| e.to_string())
+    } else {
+        Ok(format!("created {path}/"))
+    }
+}
+
+// ── Mv ───────────────────────────────────────────────────────────────────────
+
+fn cmd_mv(from: &str, to: &str, json: bool) -> Result<String, String> {
+    if let Some(parent) = Path::new(to).parent() {
+        if !parent.as_os_str().is_empty() {
+            std::fs::create_dir_all(parent).ok();
+        }
+    }
+    std::fs::rename(from, to).map_err(|e| format!("mv {from} {to}: {e}"))?;
+    if json {
+        let r = FsResult { kind: "mv", from: from.to_string(), to: to.to_string() };
+        serde_json::to_string(&r).map_err(|e| e.to_string())
+    } else {
+        Ok(format!("{from} → {to}"))
+    }
+}
+
+// ── Cp ───────────────────────────────────────────────────────────────────────
+
+fn cmd_cp(from: &str, to: &str, json: bool) -> Result<String, String> {
+    if let Some(parent) = Path::new(to).parent() {
+        if !parent.as_os_str().is_empty() {
+            std::fs::create_dir_all(parent).ok();
+        }
+    }
+    std::fs::copy(from, to).map_err(|e| format!("cp {from} {to}: {e}"))?;
+    if json {
+        let r = FsResult { kind: "cp", from: from.to_string(), to: to.to_string() };
+        serde_json::to_string(&r).map_err(|e| e.to_string())
+    } else {
+        Ok(format!("{from} → {to}"))
+    }
+}
+
 // ── Diff ─────────────────────────────────────────────────────────────────────
 
 fn cmd_diff(file_a: &str, file_b: &str, json: bool) -> Result<String, String> {
@@ -869,12 +1031,56 @@ fn cmd_http(url: &str, json: bool) -> Result<String, String> {
 // ── Git ──────────────────────────────────────────────────────────────────────
 
 fn cmd_git(action: &GitAction, json: bool) -> Result<String, String> {
+    // Special cases: commit, branch, checkout
+    match action {
+        GitAction::Commit { msg } => {
+            Command::new("git").args(["add", "-A"]).output().ok();
+            let out = Command::new("git")
+                .args(["commit", "-m", msg])
+                .output()
+                .map_err(|e| format!("git commit: {e}"))?;
+            let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+            let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+            let result = if stdout.is_empty() { stderr } else { stdout };
+            if json {
+                let r = GitResult { kind: "git", command: "commit".into(), output: result.trim().into() };
+                return serde_json::to_string(&r).map_err(|e| e.to_string());
+            }
+            return Ok(result.trim_end().to_string());
+        }
+        GitAction::Branch => {
+            let out = Command::new("git").args(["branch"]).output().map_err(|e| format!("git branch: {e}"))?;
+            let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+            if json {
+                let r = GitResult { kind: "git", command: "branch".into(), output: stdout.trim().into() };
+                return serde_json::to_string(&r).map_err(|e| e.to_string());
+            }
+            return Ok(stdout.trim_end().to_string());
+        }
+        GitAction::Checkout { branch } => {
+            let out = Command::new("git")
+                .args(["checkout", branch])
+                .output()
+                .map_err(|e| format!("git checkout: {e}"))?;
+            let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+            let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+            let result = if stdout.is_empty() { stderr } else { stdout };
+            if json {
+                let r = GitResult { kind: "git", command: "checkout".into(), output: result.trim().into() };
+                return serde_json::to_string(&r).map_err(|e| e.to_string());
+            }
+            return Ok(result.trim_end().to_string());
+        }
+        _ => {}
+    }
+
     let (args, desc): (Vec<String>, &str) = match action {
         GitAction::Status => (vec!["status".into(), "--short".into()], "status"),
         GitAction::Diff => (vec!["diff".into()], "diff"),
         GitAction::Log { count } => (vec!["log".into(), "--oneline".into(), format!("-{count}")], "log"),
         GitAction::Staged => (vec!["diff".into(), "--cached".into()], "staged"),
         GitAction::Show { rev } => (vec!["show".into(), "--stat".into(), "--oneline".into(), rev.into()], "show"),
+        _ => unreachable!(),
     };
 
     let output = Command::new("git")
